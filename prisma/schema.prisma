@@ -1,0 +1,198 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   // "patient" | "hospital" | "blood_bank" | "admin"
+  name      String
+  phone     String?
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  patientProfile   Patient?
+  hospitalProfile  Hospital?
+  bloodBankProfile BloodBank?
+}
+
+model Patient {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id])
+  dob              DateTime?
+  gender           String?
+  bloodGroup       String?
+  emergencyContact String?
+  medicalHistory   String?
+  
+  appointments     Appointment[]
+  reports          MedicalReport[]
+  bloodRequests    BloodRequest[]
+}
+
+model Hospital {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id])
+  name               String
+  licenseNo          String?
+  address            String
+  city               String
+  state              String
+  country            String   @default("India")
+  pincode            String?
+  lat                Float?
+  lng                Float?
+  phone              String
+  email              String
+  website            String?
+  image              String?
+  description        String?
+  rating             Float    @default(0)
+  totalReviews       Int      @default(0)
+  verified           Boolean  @default(false)
+  emergencyAvailable Boolean  @default(false)
+  bedCount           Int      @default(0)
+  establishedYear    Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  departments        Department[]
+  services           Service[]
+  doctors            Doctor[]
+  appointments       Appointment[]
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  hospitalId  String
+  hospital    Hospital @relation(fields: [hospitalId], references: [id])
+  name        String
+  description String?
+  icon        String?
+  
+  doctors     Doctor[]
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  hospitalId      String
+  hospital        Hospital @relation(fields: [hospitalId], references: [id])
+  name            String
+  category        String
+  description     String?
+  price           Float
+  durationMinutes Int
+  availability    Boolean  @default(true)
+}
+
+model Doctor {
+  id               String   @id @default(uuid())
+  hospitalId       String
+  hospital         Hospital @relation(fields: [hospitalId], references: [id])
+  departmentId     String
+  department       Department @relation(fields: [departmentId], references: [id])
+  name             String
+  photo            String?
+  qualification    String
+  specialization   String
+  experienceYears  Int
+  consultationFee  Float
+  rating           Float    @default(0)
+  totalReviews     Int      @default(0)
+  bio              String?
+  availableToday   Boolean  @default(true)
+  
+  appointments     Appointment[]
+}
+
+model Appointment {
+  id            String   @id @default(uuid())
+  appointmentId String   @unique // MC-XXXXX format
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id])
+  doctorId      String
+  doctor        Doctor   @relation(fields: [doctorId], references: [id])
+  hospitalId    String
+  hospital      Hospital @relation(fields: [hospitalId], references: [id])
+  serviceId     String?
+  department    String
+  date          DateTime
+  timeSlot      String
+  status        String   // "pending" | "confirmed" | "completed" | "cancelled" | "rescheduled"
+  qrCode        String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model MedicalReport {
+  id         String   @id @default(uuid())
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id])
+  fileUrl    String
+  aiSummary  String?
+  riskLevel  String?  // "low" | "moderate" | "high"
+  findings   String?
+  medicines  String?
+  createdAt  DateTime @default(now())
+}
+
+model BloodBank {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  name            String
+  licenseNo       String?
+  address         String
+  city            String
+  state           String
+  country         String   @default("India")
+  lat             Float?
+  lng             Float?
+  phone           String
+  email           String
+  storageCapacity Int      @default(0)
+  verified        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  inventory       BloodInventory[]
+  requests        BloodRequest[]
+}
+
+model BloodInventory {
+  id             String   @id @default(uuid())
+  bloodBankId    String
+  bloodBank      BloodBank @relation(fields: [bloodBankId], references: [id])
+  bloodGroup     String   // "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"
+  unitsAvailable Int      @default(0)
+  lastUpdated    DateTime @default(now()) @updatedAt
+}
+
+model BloodRequest {
+  id             String   @id @default(uuid())
+  patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id])
+  bloodBankId    String
+  bloodBank      BloodBank @relation(fields: [bloodBankId], references: [id])
+  bloodGroup     String
+  unitsRequested Int
+  urgency        String   // "normal" | "urgent" | "critical"
+  status         String   // "pending" | "approved" | "dispatched" | "delivered" | "rejected"
+  medicalDocUrl  String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
